@@ -47,7 +47,7 @@ internal class OkHttpNpmPackageDownloader(
       val version = fhirNpmPackage.version
       val url = "$packageServerUrl$packageName/$version"
 
-      val request = Request.Builder().url(url).get().build()
+      val request = Request.Builder().url(url).header("Accept", "application/tar+gzip").get().build()
 
       val response = client.newCall(request).execute()
 

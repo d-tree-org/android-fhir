@@ -155,6 +155,10 @@ internal constructor(
     }
   }
 
+  suspend fun isPackageInstalled(fhirNpmPackage: FhirNpmPackage): Boolean {
+    return knowledgeDao.getImplementationGuide(fhirNpmPackage.name, fhirNpmPackage.version) == null
+  }
+
   private suspend fun importFile(igId: Long?, file: File) {
     val resource =
       withContext(Dispatchers.IO) {
@@ -204,6 +208,24 @@ internal constructor(
         npmPackages.forEach { npmPackage -> loadFromPackage(npmPackage, loader) }
       }
     }
+  }
+
+  suspend fun createWorkContext(
+    allowLoadingDuplicates: Boolean = true,
+    allowRunWithoutTerminology: Boolean = true,
+    loader: SimpleWorkerContext.IContextResourceLoader? = null,
+  ): SimpleWorkerContext {
+    val simpleWorkerContext = SimpleWorkerContext()
+    simpleWorkerContext.isAllowLoadingDuplicates = allowLoadingDuplicates
+    simpleWorkerContext.isCanRunWithoutTerminology = allowRunWithoutTerminology
+    val guides = knowledgeDao.getImplementationGuides()
+    for (guide in guides) {
+      if (npmFileManager.containsPackage(guide.packageId, guide.version!!)) {
+        val path = npmFileManager.getPackageDir(guide.packageId, guide.version)
+        simpleWorkerContext.loadFromPackage(NpmPackage.fromFolder(path.absolutePath), loader)
+      }
+    }
+    return simpleWorkerContext
   }
 
   private fun loadResource(resourceEntity: ResourceMetadataEntity): IBaseResource {
