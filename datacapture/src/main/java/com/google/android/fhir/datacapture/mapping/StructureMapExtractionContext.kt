@@ -18,6 +18,7 @@ package com.google.android.fhir.datacapture.mapping
 
 import android.content.Context
 import org.hl7.fhir.r4.context.IWorkerContext
+import org.hl7.fhir.r4.context.SimpleWorkerContext
 import org.hl7.fhir.r4.model.StructureMap
 import org.hl7.fhir.r4.utils.StructureMapUtilities
 
@@ -41,4 +42,11 @@ data class StructureMapExtractionContext(
    *   [StructureMapUtilities.parse] to parse content in the FHIR Mapping Language.
    */
   val structureMapProvider: (suspend (String, IWorkerContext) -> StructureMap?),
+
+  /**
+   * Optionally pass a custom version of [IWorkerContext].
+   *
+   * @default [SimpleWorkerContext]
+   */
+  val workerContext: IWorkerContext = SimpleWorkerContext(),
 )
