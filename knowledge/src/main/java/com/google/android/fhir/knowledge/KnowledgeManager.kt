@@ -156,7 +156,7 @@ internal constructor(
   }
 
   suspend fun isPackageInstalled(fhirNpmPackage: FhirNpmPackage): Boolean {
-    return knowledgeDao.getImplementationGuide(fhirNpmPackage.name, fhirNpmPackage.version) == null
+    return knowledgeDao.getImplementationGuide(fhirNpmPackage.name, fhirNpmPackage.version) != null
   }
 
   private suspend fun importFile(igId: Long?, file: File) {
@@ -214,18 +214,35 @@ internal constructor(
     allowLoadingDuplicates: Boolean = true,
     allowRunWithoutTerminology: Boolean = true,
     loader: SimpleWorkerContext.IContextResourceLoader? = null,
+    minimalMemory: Boolean = true,
   ): SimpleWorkerContext {
     val simpleWorkerContext = SimpleWorkerContext()
     simpleWorkerContext.isAllowLoadingDuplicates = allowLoadingDuplicates
     simpleWorkerContext.isCanRunWithoutTerminology = allowRunWithoutTerminology
+    for (npmPackage in getNpmPackageManagers(minimalMemory)) {
+      if (minimalMemory) {
+        simpleWorkerContext.loadFromPackage(npmPackage, loader)
+      } else {
+        simpleWorkerContext.loadFromPackage(npmPackage, loader)
+      }
+    }
+    return simpleWorkerContext
+  }
+
+  suspend fun getNpmPackageManagers(minimalMemory: Boolean = true): List<NpmPackage> {
+    val list = mutableListOf<NpmPackage>()
     val guides = knowledgeDao.getImplementationGuides()
     for (guide in guides) {
       if (npmFileManager.containsPackage(guide.packageId, guide.version!!)) {
         val path = npmFileManager.getPackageDir(guide.packageId, guide.version)
-        simpleWorkerContext.loadFromPackage(NpmPackage.fromFolder(path.absolutePath), loader)
+        if (minimalMemory) {
+          list.add(NpmPackage.fromFolder(path.absolutePath))
+        } else {
+          list.add(NpmPackage.fromFolderMinimal(path.absolutePath))
+        }
       }
     }
-    return simpleWorkerContext
+    return list
   }
 
   private fun loadResource(resourceEntity: ResourceMetadataEntity): IBaseResource {
